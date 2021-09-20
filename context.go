@@ -27,15 +27,25 @@ type ctxKey int
 // Its value of zero is arbitrary.
 const metadataCtxKey ctxKey = 0
 
+// resultWriterCtxKey is the context key for the ResultWriter.
+// Its value of one is arbitrary.
+const resultWriterCtxKey ctxKey = 1
+
 // createContext returns a context and cancel function for a given task message.
-func createContext(msg *base.TaskMessage, deadline time.Time) (context.Context, context.CancelFunc) {
+func createContext(msg *base.TaskMessage, deadline time.Time, broker base.Broker) (context.Context, context.CancelFunc) {
 	metadata := taskMetadata{
 		id:         msg.ID,
 		maxRetry:   msg.Retry,
 		retryCount: msg.Retried,
 		qname:      msg.Queue,
 	}
+	rw := &ResultWriter{
+		id:     msg.ID,
+		qname:  msg.Queue,
+		broker: broker,
+	}
 	ctx := context.WithValue(context.Background(), metadataCtxKey, metadata)
+	ctx = context.WithValue(ctx, resultWriterCtxKey, rw)
 	return context.WithDeadline(ctx, deadline)
 }
 
@@ -84,4 +94,10 @@ func GetQueueName(ctx context.Context) (qname string, ok bool) {
 		return "", false
 	}
 	return metadata.qname, true
+}
+
+// GetResultWriter extracts a ResultWriter from a context, if any.
+func GetResultWriter(ctx context.Context) (w *ResultWriter, ok bool) {
+	w, ok = ctx.Value(resultWriterCtxKey).(*ResultWriter)
+	return w, ok
 }

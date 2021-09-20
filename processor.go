@@ -189,7 +189,7 @@ func (p *processor) exec() {
 				<-p.sema // release token
 			}()
 
-			ctx, cancel := createContext(msg, deadline)
+			ctx, cancel := createContext(msg, deadline, p.broker)
 			p.cancelations.Add(msg.ID, cancel)
 			defer func() {
 				cancel()
